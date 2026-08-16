@@ -33,7 +33,7 @@ func (r *MissingStepConditionsRule) Check(pipeline *rules.Pipeline) []rules.Find
 		}
 	}
 
-	if totalSteps > 0 && float64(stepsWithoutIf)/float64(totalSteps) > 0.70 {
+	if totalSteps >= 10 && float64(stepsWithoutIf)/float64(totalSteps) > 0.70 {
 		return []rules.Finding{
 			{
 				RuleID:     r.ID(),

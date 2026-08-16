@@ -15,9 +15,12 @@ func (r *MissingRetryConfigRule) Name() string { return "Missing Retry Configura
 func (r *MissingRetryConfigRule) Category() rules.Category { return rules.CategoryReliability }
 func (r *MissingRetryConfigRule) DefaultSeverity() rules.Severity { return rules.SeverityInfo }
 func (r *MissingRetryConfigRule) Platforms() []rules.Platform {
-	return []rules.Platform{rules.PlatformGitLab, rules.PlatformGitHub}
+	return []rules.Platform{rules.PlatformGitLab}
 }
 func (r *MissingRetryConfigRule) Check(pipeline *rules.Pipeline) []rules.Finding {
+	if pipeline.Platform != rules.PlatformGitLab {
+		return nil
+	}
 	var findings []rules.Finding
 	for _, job := range pipeline.Jobs {
 		if job.Retry == nil {

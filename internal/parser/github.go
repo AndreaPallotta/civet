@@ -19,6 +19,7 @@ type githubWorkflow struct {
 
 type githubJob struct {
 	Name           string                   `yaml:"name"`
+	If             string                   `yaml:"if"`
 	RunsOn         string                   `yaml:"runs-on"`
 	Needs          []string                 `yaml:"needs"`
 	TimeoutMinutes int                      `yaml:"timeout-minutes"`
@@ -128,11 +129,17 @@ func ParseGitHub(content, filePath string) (*rules.Pipeline, error) {
 			}
 		}
 
+		var jobRules []rules.JobRule
+		if gj.If != "" {
+			jobRules = append(jobRules, rules.JobRule{If: gj.If})
+		}
+
 		job := &rules.Job{
 			Name:          jobID,
 			RunsOn:        gj.RunsOn,
 			Needs:         gj.Needs,
 			Steps:         gj.Steps,
+			Rules:         jobRules,
 			Services:      services,
 			Variables:     gj.Env,
 			Timeout:       timeoutStr,
