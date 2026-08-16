@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. v0.1.0)'
+        required: true
+        default: 'v0.1.0'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and Publish Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go Toolchain
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Resolve Version Variables
+        id: vars
+        shell: bash
+        run: |
+          REF_VER="${{ github.ref_name || inputs.version }}"
+          RAW_VER="${REF_VER#v}"
+          echo "VERSION=v${RAW_VER}" >> $GITHUB_ENV
+          echo "RAW_VERSION=${RAW_VER}" >> $GITHUB_ENV
+
+      - name: Extract Changelog Entry
+        id: changelog
+        shell: bash
+        run: |
+          VERSION_TAG="${{ env.VERSION }}"
+          if [ -f CHANGELOG.md ]; then
+            CHANGELOG_BODY=$(awk "/## \\[${VERSION_TAG}\\]/{flag=1; next} /## \\[/ {flag=0} flag" CHANGELOG.md | sed '/^---$/d')
+            if [ -z "$CHANGELOG_BODY" ]; then
+              CHANGELOG_BODY=$(awk "/## \\[${RAW_VERSION}\\]/{flag=1; next} /## \\[/ {flag=0} flag" CHANGELOG.md | sed '/^---$/d')
+            fi
+            echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGELOG_BODY" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "CHANGELOG=Initial release of Civet." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Cross-Platform Package Builds
+        shell: bash
+        run: |
+          mkdir -p dist
+          LDFLAGS="-s -w -X github.com/AndreaPallotta/civet/cmd.Version=${{ env.RAW_VERSION }} -X github.com/AndreaPallotta/civet/cmd.Commit=${{ github.sha }} -X github.com/AndreaPallotta/civet/cmd.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          
+          # Linux AMD64 & ARM64
+          GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/civet-linux-amd64 .
+          tar -czvf dist/civet-${{ env.VERSION }}-linux-amd64.tar.gz -C dist civet-linux-amd64
+          
+          GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o dist/civet-linux-arm64 .
+          tar -czvf dist/civet-${{ env.VERSION }}-linux-arm64.tar.gz -C dist civet-linux-arm64
+
+          # Darwin (macOS) AMD64 & ARM64
+          GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/civet-darwin-amd64 .
+          tar -czvf dist/civet-${{ env.VERSION }}-darwin-amd64.tar.gz -C dist civet-darwin-amd64
+
+          GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o dist/civet-darwin-arm64 .
+          tar -czvf dist/civet-${{ env.VERSION }}-darwin-arm64.tar.gz -C dist civet-darwin-arm64
+
+          # Windows AMD64
+          GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/civet.exe .
+          zip -j dist/civet-${{ env.VERSION }}-windows-amd64.zip dist/civet.exe
+
+          # Generate Checksums
+          cd dist
+          sha256sum civet-${{ env.VERSION }}-*.tar.gz civet-${{ env.VERSION }}-*.zip > checksums.txt
+          cd ..
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87238604da99376a6cb63 # v2.2.1 pinned SHA
+        with:
+          name: "Civet Release ${{ env.VERSION }}"
+          tag_name: ${{ env.VERSION }}
+          body: |
+            ## Civet Release ${{ env.VERSION }}
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ---
+
+            ### Installation via Go
+
+            ```bash
+            go install github.com/AndreaPallotta/civet@${{ env.VERSION }}
+            ```
+
+            ### Precompiled Binary Packages
+            - Linux AMD64: `civet-${{ env.VERSION }}-linux-amd64.tar.gz`
+            - Linux ARM64: `civet-${{ env.VERSION }}-linux-arm64.tar.gz`
+            - macOS Intel: `civet-${{ env.VERSION }}-darwin-amd64.tar.gz`
+            - macOS Apple Silicon: `civet-${{ env.VERSION }}-darwin-arm64.tar.gz`
+            - Windows AMD64: `civet-${{ env.VERSION }}-windows-amd64.zip`
+            - Verification Checksums: `checksums.txt`
+          files: |
+            dist/civet-${{ env.VERSION }}-linux-amd64.tar.gz
+            dist/civet-${{ env.VERSION }}-linux-arm64.tar.gz
+            dist/civet-${{ env.VERSION }}-darwin-amd64.tar.gz
+            dist/civet-${{ env.VERSION }}-darwin-arm64.tar.gz
+            dist/civet-${{ env.VERSION }}-windows-amd64.zip
+            dist/checksums.txt

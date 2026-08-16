@@ -18,14 +18,15 @@ type githubWorkflow struct {
 }
 
 type githubJob struct {
-	Name           string            `yaml:"name"`
-	RunsOn         string            `yaml:"runs-on"`
-	Needs          []string          `yaml:"needs"`
-	TimeoutMinutes int               `yaml:"timeout-minutes"`
-	Env            map[string]string `yaml:"env"`
-	Permissions    map[string]string `yaml:"permissions"`
-	Concurrency    *rules.Concurrency`yaml:"concurrency"`
-	Steps          []rules.Step      `yaml:"steps"`
+	Name           string                   `yaml:"name"`
+	RunsOn         string                   `yaml:"runs-on"`
+	Needs          []string                 `yaml:"needs"`
+	TimeoutMinutes int                      `yaml:"timeout-minutes"`
+	Environment    interface{}              `yaml:"environment"`
+	Env            map[string]string        `yaml:"env"`
+	Permissions    map[string]string        `yaml:"permissions"`
+	Concurrency    *rules.Concurrency       `yaml:"concurrency"`
+	Steps          []rules.Step             `yaml:"steps"`
 	Services       map[string]rules.Service `yaml:"services"`
 }
 
@@ -117,6 +118,16 @@ func ParseGitHub(content, filePath string) (*rules.Pipeline, error) {
 			}
 		}
 
+		envStr := ""
+		switch ev := gj.Environment.(type) {
+		case string:
+			envStr = ev
+		case map[string]interface{}:
+			if name, ok := ev["name"].(string); ok {
+				envStr = name
+			}
+		}
+
 		job := &rules.Job{
 			Name:          jobID,
 			RunsOn:        gj.RunsOn,
@@ -125,6 +136,7 @@ func ParseGitHub(content, filePath string) (*rules.Pipeline, error) {
 			Services:      services,
 			Variables:     gj.Env,
 			Timeout:       timeoutStr,
+			Environment:   envStr,
 			Cache:         cache,
 			Line:          jobLines[jobID],
 		}
