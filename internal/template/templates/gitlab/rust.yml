@@ -1,0 +1,39 @@
+image: rust:1.78-slim
+
+stages:
+  - lint
+  - test
+  - build
+
+variables:
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
+
+cache:
+  paths:
+    - .cargo/registry
+    - .cargo/git
+    - target/
+
+lint:
+  stage: lint
+  script:
+    - rustup component add clippy
+    - cargo clippy -- -D warnings
+  interruptible: true
+
+test:
+  stage: test
+  script:
+    - cargo test
+  interruptible: true
+
+build:
+  stage: build
+  script:
+    - cargo build --release
+  artifacts:
+    paths:
+      - target/release/
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

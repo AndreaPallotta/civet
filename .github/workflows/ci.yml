@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build, Test and Self-Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Verify Dependencies
+        run: go mod verify
+
+      - name: Run Tests
+        run: go test -v -race ./...
+
+      - name: Build Binary
+        run: go build -v -o civet .
+
+      - name: Civet Self-Audit
+        run: ./civet audit .github/workflows/ci.yml --fail-under 80

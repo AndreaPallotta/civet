@@ -1,0 +1,41 @@
+image: golang:1.22-alpine
+
+stages:
+  - lint
+  - test
+  - build
+
+variables:
+  GOPATH: $CI_PROJECT_DIR/.go
+
+cache:
+  paths:
+    - .go/pkg/mod/
+
+lint:
+  stage: lint
+  image: golangci/golangci-lint:v1.59.0-alpine
+  script:
+    - golangci-lint run
+  interruptible: true
+
+test:
+  stage: test
+  script:
+    - go test -v -coverprofile=coverage.out ./...
+  interruptible: true
+  artifacts:
+    paths:
+      - coverage.out
+    expire_in: 1 week
+
+build:
+  stage: build
+  script:
+    - go build -o main .
+  artifacts:
+    paths:
+      - main
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
