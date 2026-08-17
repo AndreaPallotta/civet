@@ -16,7 +16,11 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of civet",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("civet version %s\n", Version)
+		if Commit != "unknown" && Date != "unknown" {
+			fmt.Printf("civet version %s (commit: %s, built: %s)\n", Version, Commit, Date)
+		} else {
+			fmt.Printf("civet version %s\n", Version)
+		}
 	},
 }
 
