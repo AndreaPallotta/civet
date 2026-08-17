@@ -8,7 +8,7 @@ import (
 	"text/template"
 )
 
-//go:embed templates/*
+//go:embed templates
 var FS embed.FS
 
 type Options struct {
