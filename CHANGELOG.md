@@ -4,6 +4,14 @@ All notable changes to Civet will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.1.1] - 2026-08-17
+
+### Security
+- Pin `softprops/action-gh-release` to immutable full commit SHA in release workflow.
+
+### Documentation
+- Add Civet project logo and badges to README.
+
 ## [0.1.0] - 2026-08-16
 
 ### Added
