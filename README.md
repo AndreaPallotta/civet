@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Civet Logo" width="120" />
+</p>
+
 # Civet
 
 Civet is a fast, deterministic CI/CD pipeline analyzer and assistant. It evaluates pipeline configurations against industry best practices, scores health across key architectural dimensions, and provides actionable recommendations.
