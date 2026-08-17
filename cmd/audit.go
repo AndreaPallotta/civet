@@ -67,21 +67,28 @@ var auditCmd = &cobra.Command{
 		}
 
 		// Render report based on format
-		switch format {
-		case "json":
-			jsonRep := report.NewJSONReporter()
-			if err := jsonRep.Write(os.Stdout, rep); err != nil {
+		if llmMode || format == "llm" {
+			llmRep := report.NewLLMReporter()
+			if err := llmRep.Write(os.Stdout, rep); err != nil {
 				return err
 			}
-		case "markdown", "md":
-			mdRep := report.NewMarkdownReporter()
-			if err := mdRep.Write(os.Stdout, rep); err != nil {
-				return err
-			}
-		default:
-			termRep := report.NewTerminalReporter()
-			if err := termRep.Write(os.Stdout, rep); err != nil {
-				return err
+		} else {
+			switch format {
+			case "json":
+				jsonRep := report.NewJSONReporter()
+				if err := jsonRep.Write(os.Stdout, rep); err != nil {
+					return err
+				}
+			case "markdown", "md":
+				mdRep := report.NewMarkdownReporter()
+				if err := mdRep.Write(os.Stdout, rep); err != nil {
+					return err
+				}
+			default:
+				termRep := report.NewTerminalReporter()
+				if err := termRep.Write(os.Stdout, rep); err != nil {
+					return err
+				}
 			}
 		}
 

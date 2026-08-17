@@ -1,13 +1,16 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/AndreaPallotta/civet/internal/config"
 	"github.com/AndreaPallotta/civet/internal/engine"
 	"github.com/AndreaPallotta/civet/internal/parser"
+	"github.com/AndreaPallotta/civet/internal/report"
 	"github.com/AndreaPallotta/civet/internal/scanner"
 )
 
@@ -67,6 +70,66 @@ var scanCmd = &cobra.Command{
 			if rep.OverallScore < lowestScore {
 				lowestScore = rep.OverallScore
 			}
+		}
+
+		if llmMode || format == "llm" {
+			type scanLLMOutput struct {
+				Header    string                 `json:"system_prompt_context"`
+				TotalDone int                    `json:"total_pipelines_scanned"`
+				Pipelines []report.LLMContext    `json:"pipelines"`
+			}
+
+			var contexts []report.LLMContext
+			for _, file := range files {
+				pipeline, err := parser.Parse(file)
+				if err != nil {
+					continue
+				}
+				rep := engine.Run(pipeline, cfg)
+				
+				grade := "HEALTHY"
+				if rep.OverallScore < 60 {
+					grade = "CRITICAL_ATTENTION_REQUIRED"
+				} else if rep.OverallScore < 85 {
+					grade = "NEEDS_IMPROVEMENT"
+				}
+
+				var findings []report.LLMFinding
+				var actionItems []string
+				for _, f := range rep.Findings {
+					findings = append(findings, report.LLMFinding{
+						RuleID:      f.RuleID,
+						RuleName:    f.RuleName,
+						Severity:    f.Severity,
+						Category:    f.Category,
+						Location:    f.Location,
+						Description: f.Message,
+						ProposedFix: f.Suggestion,
+					})
+					actionItems = append(actionItems, fmt.Sprintf("[%s] Resolve %s: %s", f.Severity.String(), f.RuleID, f.Suggestion))
+				}
+
+				contexts = append(contexts, report.LLMContext{
+					Header: "Civet Deterministic CI/CD Quality Audit",
+					Pipeline: report.LLMPipelineInfo{
+						FilePath: rep.FilePath,
+						Platform: rep.Platform.String(),
+					},
+					Scores:      rep.CategoryScores,
+					TotalScore:  rep.OverallScore,
+					HealthGrade: grade,
+					Findings:    findings,
+					ActionItems: actionItems,
+				})
+			}
+
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			return enc.Encode(scanLLMOutput{
+				Header:    "Civet Workspace Pipeline Scan. Review these pipelines and prioritize refactoring based on health_grade.",
+				TotalDone: len(contexts),
+				Pipelines: contexts,
+			})
 		}
 
 		fmt.Println("Scan Results:")

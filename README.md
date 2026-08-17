@@ -46,10 +46,18 @@ civet audit .gitlab-ci.yml
 civet audit .github/workflows/ci.yml
 ```
 
-Output structured JSON for AI agents or automated tooling:
+Output dense, token-optimized context tailored for LLM coding agents (Claude, Codex, Antigravity):
+
+```bash
+civet audit .gitlab-ci.yml --llm
+civet scan . --llm
+```
+
+Output structured JSON or Markdown:
 
 ```bash
 civet audit .gitlab-ci.yml --format json
+civet audit .gitlab-ci.yml --format markdown
 ```
 
 Fail in CI if the pipeline score is below a defined threshold:

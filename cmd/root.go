@@ -11,6 +11,7 @@ var (
 	format     string
 	configFile string
 	aiProvider string
+	llmMode    bool
 )
 
 var rootCmd = &cobra.Command{
@@ -21,9 +22,10 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&format, "format", "f", "terminal", "Output format (terminal/json/markdown)")
+	rootCmd.PersistentFlags().StringVarP(&format, "format", "f", "terminal", "Output format (terminal/json/markdown/llm)")
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", ".civet.yml", "Path to config file")
 	rootCmd.PersistentFlags().StringVar(&aiProvider, "ai", "", "AI provider override (claude/openai/gemini/ollama)")
+	rootCmd.PersistentFlags().BoolVar(&llmMode, "llm", false, "Output dense, token-optimized context for LLM agents")
 }
 
 func Execute() error {
