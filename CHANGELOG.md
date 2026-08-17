@@ -4,6 +4,12 @@ All notable changes to Civet will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.1.1] - 2026-08-16
+
+### Fixed
+- Fixed template embed directive to recursively bundle embedded CI/CD templates.
+- Updated softprops release action to v2 in GitHub Actions release workflow.
+
 ---
 
 ## [0.1.0] - 2026-08-16
